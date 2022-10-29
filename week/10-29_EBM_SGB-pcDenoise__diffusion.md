@@ -152,7 +152,7 @@ SPD特长：
 >
 > 本块不保真，需要进一步检验。
 
-<img src="./10-29_EBM_SGB-pcDenoise.assets/image-20221028145804603.png" alt="image-20221028145804603" style="zoom:50%;" name="SPDHow2denoise" />
+<img src="./assets/image-20221028145804603.png" alt="image-20221028145804603" style="zoom:50%;" name="SPDHow2denoise" />
 
 > 快速浏览Relate Work时发现一个非常相关的工作ShapeGF，不出意外是这篇文章的灵感来源。
 >
@@ -164,7 +164,7 @@ SPD特长：
 
 #### model
 
-<img src="./10-29_EBM_SGB-pcDenoise.assets/image-20221028155958134.png" alt="image-20221028155958134" style="zoom: 50%;" />
+<img src="./assets/image-20221028155958134.png" alt="image-20221028155958134" style="zoom: 50%;" />
 
 > 这个模型的简单理解就是：
 >
@@ -224,7 +224,7 @@ DiffusionModel的出现得益于EBM、热力学等非常多知识的积累，它
 
 Diffusion可以分为两个部分，前向模糊过程和后向降噪过程。
 
-![img](./10-29_EBM_SGB-pcDenoise.assets/DDPM.png)
+![img](./assets/DDPM.png)
 
 #### 前向过程
 
@@ -241,7 +241,7 @@ $$
 
 从某分布中采样样本的过程是不可逆的，即我们无法的到$q(x_{t-1}|x_t)$这一迁移过程。但根据推导，若$q(x_t|x_{t-1})$满足高斯分布且$\beta_t$足够小，$q(x_{t-1}|x_t)$仍是一个高斯分布，但这还是做不到推断逆向。结合EBM和深度学习模型，就可以做到预测一个逆向的分布$p_\theta$，实现逆向推导。
 
-<img src="./10-29_EBM_SGB-pcDenoise.assets/image-20221029150928555.png" alt="image-20221029150928555" style="zoom:50%;" />
+<img src="./assets/image-20221029150928555.png" alt="image-20221029150928555" style="zoom:50%;" />
 
 省略了~~一串非常吸引人的~~公式推导后，可以得到如下逆向过程：
 
@@ -250,7 +250,6 @@ $$
    \mu_\theta(x_t,t)=\frac 1 {\sqrt {\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline a_t}}z_\theta(x_t,t))
    $$
    
-
 2. 计算方差$\Sigma_\theta(x_t,t)$，不同模型对这步使用的方法不同；
 
 3. 根据$p_\theta(x_{t-1}|x_t)$得到$q(x_{t-1}|x_t)$，利用ReparameterizationTrick得到$x_{t-1}$：
@@ -260,7 +259,7 @@ $$
    $$
    
 
-![image-20221029152237311](./10-29_EBM_SGB-pcDenoise.assets/image-20221029152237311.png)
+![image-20221029152237311](./assets/image-20221029152237311.png)
 
 #### Loss
 
