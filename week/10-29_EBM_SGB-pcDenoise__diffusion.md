@@ -8,11 +8,10 @@
 >
 > 简单了解了Diffusion Model。
 >
-> [How to Train Your Energy-Based Models](https://arxiv.org/abs/2101.03288)
->
-> [Score-Based Point Cloud Denoising](https://openaccess.thecvf.com/content/ICCV2021/html/Luo_Score-Based_Point_Cloud_Denoising_ICCV_2021_paper.html)
 
 ### Score-Based generative Model
+
+> [How to Train Your Energy-Based Models](https://arxiv.org/abs/2101.03288)
 
 EBM是当前score-based方法的基础模型。
 
@@ -129,6 +128,8 @@ $$
 
 ### Score-Based Point Cloud Denosing
 
+> [Score-Based Point Cloud Denoising](https://openaccess.thecvf.com/content/ICCV2021/html/Luo_Score-Based_Point_Cloud_Denoising_ICCV_2021_paper.html)
+
 Score-Based Point Cloud Denosing（以下省略为SPD）实现了将基于EBM的Score-Based Model引用于点云降噪。SPD认为，输入的噪声点云可以被认作是干净点云样本的模型$p(x)$和噪声分布模型$n$的卷积，即$p*n(x)$。此外，SPD沿用传统SBM中的对数似然估计（log-likelihood）计算$x$的分布的上升梯度进行迭代更新$x$（类似于LangevinMCMC，但SPD依旧沿用了某个前人的近似有偏估计，不是创新点）。
 
 本文的创新点：
@@ -215,3 +216,52 @@ $\alpha_t$就是个$(0,1)$的参数，不是重点。
 
 ### Diffusion Model
 
+> 感谢[Lil的博客](https://lilianweng.github.io/posts/2021-07-11-diffusion-models/#forward-diffusion-process)无私提供的易于理解的分享。
+>
+> [Lil博客的中文翻译+扩展知识](https://zhuanlan.zhihu.com/p/525106459)
+
+DiffusionModel的出现得益于EBM、热力学等非常多知识的积累，它的存在打破了传统对概率论的依赖，将人们的视线从某事件发生的概率转变为一件事物与另一间事物之间的**因果关系**，换句话说，我们不再关注事件的分布，而是关注某种特征下两个事物之间的因果关系。
+
+Diffusion可以分为两个部分，前向模糊过程和后向降噪过程。
+
+![img](./10-29_EBM_SGB-pcDenoise.assets/DDPM.png)
+
+#### 前向过程
+
+定义初始真实图片$x_0\sim q(x)$，前向模糊过程中通过$T$次累计为其添加高斯噪声，得到$x_1,...,x_T$，给定高斯分布方差的超参数$\{\beta_t\in(0,1)\}^T_{t=1}$，因此每个迁移过程可表示为以下马尔科夫链过程：（其他参数不重要or不好归纳or很好理解，因此不`where`了）
+$$
+q(x_t|x_{t-1})=\mathcal N(x_t;\ \sqrt{1-\beta_t}x_{t-1},\ \beta_t{\rm I}),\ q(x_{1:T}|x_0)=\prod^T_{t=1}q(x_t|x_{t-1})
+$$
+因此Diffusion具有两个重要特性：
+
+- Reparameterization Trick：从某分布随机采样样本的这一过程是不可逆的，但为了实现找逆样本，需要使用ReparameterizationTrick使其可微。
+- 任何时刻的$x_t$都可由$x_0$和$\beta$直接表示：这是为了快速计算。这一特质与迁移链中为什么有个$\sqrt{1-\beta_t}$有关。
+
+#### 逆向过程
+
+从某分布中采样样本的过程是不可逆的，即我们无法的到$q(x_{t-1}|x_t)$这一迁移过程。但根据推导，若$q(x_t|x_{t-1})$满足高斯分布且$\beta_t$足够小，$q(x_{t-1}|x_t)$仍是一个高斯分布，但这还是做不到推断逆向。结合EBM和深度学习模型，就可以做到预测一个逆向的分布$p_\theta$，实现逆向推导。
+
+<img src="./10-29_EBM_SGB-pcDenoise.assets/image-20221029150928555.png" alt="image-20221029150928555" style="zoom:50%;" />
+
+省略了~~一串非常吸引人的~~公式推导后，可以得到如下逆向过程：
+
+1. 每个时间步，通过$x_t$和$t$预测高斯噪声$z_\theta(x_t,t)$，根据公式得到均值$\mu_\theta$：
+   $$
+   \mu_\theta(x_t,t)=\frac 1 {\sqrt {\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline a_t}}z_\theta(x_t,t))
+   $$
+   
+
+2. 计算方差$\Sigma_\theta(x_t,t)$，不同模型对这步使用的方法不同；
+
+3. 根据$p_\theta(x_{t-1}|x_t)$得到$q(x_{t-1}|x_t)$，利用ReparameterizationTrick得到$x_{t-1}$：
+   $$
+   p_\theta(x_{t-1}|x_t)=\mathcal N(x_{t-1};\ \mu_\theta(x_t,t),\ \Sigma_\theta(x_t,t))\\
+   q(x_{t-1}|x_t,x_0)=\mathcal N(x_{t-1};\ \tilde\mu(x_t,x_0),\ \tilde\beta_t{\rm I})
+   $$
+   
+
+![image-20221029152237311](./10-29_EBM_SGB-pcDenoise.assets/image-20221029152237311.png)
+
+#### Loss
+
+> TODO: 这块有好多处无法理解的地方
