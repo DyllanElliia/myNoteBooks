@@ -245,9 +245,16 @@ $$
 
 省略了~~一串非常吸引人的~~公式推导后，可以得到如下逆向过程：
 
-1. 每个时间步，通过$x_t$和$t$预测高斯噪声$z_\theta(x_t,t)$，根据公式得到均值$\mu_\theta$：
+1. 每个时间步，通过$x_t$和$t$预测高斯噪声$z_\theta(x_t,t)$，根据公式得到均值$\mu_\theta$：（忽略了可简单推导的两步）
    $$
-   \mu_\theta(x_t,t)=\frac 1 {\sqrt {\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline a_t}}z_\theta(x_t,t))
+   \begin{align*}
+   q(x_{t-1}|x_t,x_0)&=q(x_t|x_{t-1},x_0)\frac {q(x_{t-1}|x_0)}{q(x_t|x_0)}\\
+   &\propto {\rm exp}(-\frac 1 2\underbrace{(\frac {\alpha_t} {\beta_t}+\frac 1{1-\overline \alpha_{t-1}})x^2_{t-1}}_{x_{t-1}方差}-\underbrace{(\frac {2\sqrt{\alpha_t}} {\beta_t}x_t+\frac {2\sqrt{\overline\alpha_{t-1}}}{1-\overline \alpha_{t-1}}x_0)x^2_{t-1}}_{x_{t-1}均值}\\&+   \underbrace{C(x_t,x_0)}_{与x_{t-1}无关}),\\where\ &\alpha_t=1-\beta_t,\ \overline\alpha_t=\prod^T_{i=1}\alpha_i\\
+   &C(x_t,x_0)=(\frac 1 {\beta_t}-\frac 1{1-\overline \alpha_t})x_t^2+(\frac 1{1-\overline \alpha_{t-1}}-\frac 1{1-\overline \alpha_t})x_0^2+\frac {2\overline\alpha_t}{1-\overline \alpha_t}x_0x_t
+   \\
+   \Rightarrow
+   \mu_\theta(x_t,t)&=\frac 1 {\sqrt {\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline a_t}}z_\theta(x_t,t))\\
+   \end{align*}\\
    $$
    
 2. 计算方差$\Sigma_\theta(x_t,t)$，不同模型对这步使用的方法不同；
@@ -263,4 +270,7 @@ $$
 
 #### Loss
 
-> TODO: 这块有好多处无法理解的地方
+> [Loss](https://zhuanlan.zhihu.com/p/500532271)
+
+如何训练Diffusion以得到
+
