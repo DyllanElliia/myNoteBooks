@@ -1,6 +1,8 @@
 > 本周工作：
 >
-> 1. j
+> 1. 打标签，完成；
+> 1. 研读Diffusion Probabilistic Models；
+> 1. 调研了微软为unity提供的Hololens库和Ar Foundation；
 
 # Diffusion Probabilistic Models for 3D Point Cloud Generation
 
@@ -8,7 +10,7 @@
 
 该文受非平衡热力学启发，基于DiffusionModel提出了点云生成方法。其中，他们认为3D点云中的点可视为非平衡热力学系统中的粒子，在扩散作用下粒子会从某形状扩散到整个空间。这个工作将点云的点分布和噪声分布建立关联。通过学习寻找逆分布，从而从噪声中恢复原始点分布。
 
-<img src="C:\Users\12313123\AppData\Roaming\Typora\typora-user-images\image-20221105151234690.png" alt="image-20221105151234690" style="zoom:50%;" />
+<img src="./DiffusionForPointCloudGeneration.assets/image-20221105151234690.png" alt="image-20221105151234690" style="zoom:67%;" />
 
 本文的创新点：
 
@@ -76,7 +78,7 @@ $$
 
 \end{align*}
 $$
-![image-20221108143525824](C:\Users\12313123\AppData\Roaming\Typora\typora-user-images\image-20221108143525824.png)
+![image-20221108143525824](./DiffusionForPointCloudGeneration.assets/image-20221108143525824.png)
 
 由于样本的采样的独立性，可继续细化Loss：
 $$
@@ -99,11 +101,11 @@ $$
 - 蓝色部分为Diffusion模型的Loss；
 - 绿色部分是Flow模型需要计算的Loss，对于AutoEncoder这个模块，不需要计算这个交叉熵。
 
-![image-20221108153029632](C:\Users\12313123\AppData\Roaming\Typora\typora-user-images\image-20221108153029632.png)
+![image-20221108153029632](./DiffusionForPointCloudGeneration.assets/image-20221108153029632.png)
 
 ### Model Implementations
 
-<img src="C:\Users\12313123\AppData\Roaming\Typora\typora-user-images\image-20221105171115785.png" alt="image-20221105171115785" style="zoom: 80%;" />
+<img src="./DiffusionForPointCloudGeneration.assets/image-20221105171115785.png" alt="image-20221105171115785" style="zoom:80%;" />
 
 如上，模型训练Loss分两个部分，DiffusionLoss和自编码Loss。
 
@@ -128,4 +130,4 @@ $$
    - 需要一个用于控制DiffusionSampling的$z$，它的输入是噪声点云，目的是让最终生成的模型是噪声点云潜在描述的那个样子。有如下难点：
      - 这个分布的输入一个各向异性分布，输出一个潜在特征；
      - 如何计算Loss？或者，不用算？Flow能做吗？AutoEncoder能做吗？
-
+2. 从之前的Score-Based方法中，它们通过猜Patch中平面的分布从而实现降噪。那么对于Diffusion来说，每一Step都是通过输入猜噪声分布，然后再通过重采样采样下一个Step，从而实现从噪声到实体的生成过程。那么，能否使用Diffusion对点云Patch进行降噪？因为对于Diffusion的每Step可以理解为通过重采样采样一个ScoreFunction，从而实现降噪。
