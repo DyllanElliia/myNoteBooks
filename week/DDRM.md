@@ -50,17 +50,35 @@ q^{(T)}(\overline x_i^{(T)}|x_i^{(0)},y)&=\left\{
 \right.\\
 q^{(t)}(\overline x_i^{(t)}|x_i^{(t+1)},x^{(0)},y)&=\left\{
 \begin{array}{**lr**}
-{\mathcal N}(\overline x^{(0)}_i+\sqrt{1-\mu^2}\sigma_t\frac{\overline x^{(t+1)}_i-\overline x^{(0)}_i}{\sigma_{t+1}},\mu^2\sigma^2_t)&if\ s_i=0\\
-{\mathcal N}(\overline x^{(0)}_i+\sqrt{1-\mu^2}\sigma_t\frac{\overline y_i-\overline x^{(0)}_i}{\sigma_y/s_i},\mu^2\sigma^2_t)&if\ \sigma_t<\frac {\sigma_y} {s_i}\\
-{\mathcal N}((1-\mu_b)\overline x^{(0)}_i+\mu_b\overline y_i,\sigma_t^2-\frac{\sigma_y^2}{s_i^2}\mu_b^2)&if\ \sigma_t\ge\frac {\sigma_y} {s_i}\\
+{\mathcal N}(\overline x^{(0)}_i+\sqrt{1-\eta^2}\sigma_t\frac{\overline x^{(t+1)}_i-\overline x^{(0)}_i}{\sigma_{t+1}},\eta^2\sigma^2_t)&if\ s_i=0\\
+{\mathcal N}(\overline x^{(0)}_i+\sqrt{1-\eta^2}\sigma_t\frac{\overline y_i-\overline x^{(0)}_i}{\sigma_y/s_i},\eta^2\sigma^2_t)&if\ \sigma_t<\frac {\sigma_y} {s_i}\\
+{\mathcal N}((1-\eta_b)\overline x^{(0)}_i+\eta_b\overline y_i,\sigma_t^2-\frac{\sigma_y^2}{s_i^2}\eta_b^2)&if\ \sigma_t\ge\frac {\sigma_y} {s_i}\\
 \end{array}
 \right.
 \end{align*}
 $$
-其中, $\mu\in (0,1]$是一个超参数, 用于描述相变方差, 且$\mu$和$\mu_b$依赖于$\sigma_t,\ s_i,\ \sigma_y$.
+其中, $\eta\in (0,1]$是一个超参数, 用于描述相变方差, 且$\eta$和$\eta_b$依赖于$\sigma_t,\ s_i,\ \sigma_y$.
 
 上公式的分布满足$q(x^t|x^0)=\mathcal N(x^0,\sigma_t^2{\bf I})$.
 
 和DDPM类似, 本文目标得到对于$x^0$在每一步 $t$ 的预测值. 为了简化变量, 定义符号 $x^{(\theta,t)}$ 表示由模型 $f_\theta(x^{(t+1)},t+1):\R^n\times \R\rightarrow\R^n$ 预测的值. 定义 $\overline x^{(\theta,t)}_i$ 为 $\overline x^{(\theta,t)}=V^Tx^{(\theta,t)}$ 的第i个值.
 
 由此得到DDRM的可训练参数 $\theta$ 的模型:
+$$
+\begin{align*}
+{\color{maroon}p_\theta^{(T)}(\overline x_i^{(T)}|y)}&=\left\{
+\begin{array}{**lr**}
+{\mathcal N}(\overline y_i,\sigma^2_T-\frac{\sigma^2_y}{s^2_i})&if\ s_i>0\\
+{\mathcal N}({\color{maroon}0},\sigma^2_T)&if\ s_i=0
+\end{array}
+\right.\\
+{\color{maroon}p_\theta^{(t)}(\overline x_i^{(t)}|x_i^{(t+1)},y)}&=\left\{
+\begin{array}{**lr**}
+{\mathcal N}({\color{maroon}\overline x^{(\theta,t)}_i}+\sqrt{1-\eta^2}\sigma_t\frac{\overline x^{(t+1)}_i-{\color{maroon}\overline x^{(\theta,t)}_i}}{\sigma_{t+1}},\eta^2\sigma^2_t)&if\ s_i=0\\
+
+{\mathcal N}({\color{maroon}\overline x^{(\theta,t)}_i}+\sqrt{1-\eta^2}\sigma_t\frac{\overline y_i-{\color{maroon}\overline x^{(\theta,t)}_i}}{\sigma_y/s_i},\eta^2\sigma^2_t)&if\ \sigma_t<\frac {\sigma_y} {s_i}\\
+{\mathcal N}((1-\eta_b){\color{maroon}\overline x^{(\theta,t)}_i}+\eta_b\overline y_i,\sigma_t^2-\frac{\sigma_y^2}{s_i^2}\eta_b^2)&if\ \sigma_t\ge\frac {\sigma_y} {s_i}\\
+\end{array}
+\right.
+\end{align*}
+$$
