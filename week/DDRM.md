@@ -36,7 +36,7 @@ $\bf\Sigma$ 中包含$\bf H$的奇异值, 并将奇异值降序排列. 其他定
 
 定义如下简化符号:
 
-- $\overline x^{(t)}_i$ 是 $\overline x^{(t)}=V^Tx^{(t)}$ 的第i个元素, 由于$V$是正定的, 因此 $\overline x^{(t)}$ 和 x^{(t)}$ 是可以相互恢复的;
+- $\overline x^{(t)}_i$ 是 $\overline x^{(t)}=V^Tx^{(t)}$ 的第i个元素, 由于$V$是正定的, 因此 $\overline x^{(t)}$ 和 $x^{(t)}$ 是可以相互恢复的;
 - $\overline y_i$ 是 $\overline y=\Sigma^†U^Ty$ 的第i个元素 (其中$†$表示这是Moore-Penrose伪逆, 反正就是一种伪逆);
 
 对于 $\overline x_t$ 中每个元素, 可得到如下变分表达式:
