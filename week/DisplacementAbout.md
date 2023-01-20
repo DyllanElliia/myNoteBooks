@@ -13,12 +13,12 @@
 
 ## About
 
-|      Net Name       |            Output            |                       Target                       |
-| :-----------------: | :--------------------------: | :------------------------------------------------: |
-|         PCN         |            Point             |                  Point Min length                  |
-| [**Total**](#Total) |         Displacement         |     compare (Input Point + Displacement) & GT      |
-|   [3DPCD](#3DPCD)   |             404              |                        404                         |
-|  [GPDNet](#GPDNet)  | noise (same as displacement) | compare(MSE) (Input Point - $\epsilon$ noise) & GT |
+|      Net Name       |            Output            |                   Target                   |
+| :-----------------: | :--------------------------: | :----------------------------------------: |
+|         PCN         |            Point             |              Point Min length              |
+| [**Total**](#Total) |         Displacement         | compare (Input Point + Displacement) & GT  |
+|   [3DPCD](#3DPCD)   |             404              |                    404                     |
+|  [GPDNet](#GPDNet)  | noise (same as displacement) | compare(MSE) (Input Point - e* noise) & GT |
 
 ## Code
 
