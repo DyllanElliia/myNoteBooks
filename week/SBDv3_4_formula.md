@@ -22,14 +22,6 @@
 
 > 对部分符号进行重定义，为了降低公式编写难度，例如 $x^{(t)}$ 重定义为了 $x^t$。
 
-### 随机微分过程 （SDE）
-
-> 工作源于
-
-
-
-
-
 ### SBD Loss推导
 
 定义 Diffusion Process 的分布描述：
@@ -83,29 +75,29 @@ $$
 $$ {t}
 Sampling Process可描述为：
 $$
-x^{t-1}=\frac 1 {\sqrt {\alpha_t}}(x^t-\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}(-\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a),F_T]))\\
-\Rightarrow x^t=\sqrt{\alpha_t}x^{t-1}+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}(-\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a),F_T])
+x^{t-1}=\frac 1 {\sqrt {\alpha_t}}(x^t-\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}(-\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]))\\
+\Rightarrow x^t=\sqrt{\alpha_t}x^{t-1}+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}(-\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)])
 $$
 又因为，对于 Diffusion process 来说：
 $$
 x^{t}=\sqrt{\alpha_t}x^{t-1}+\sqrt{1-\alpha_t}z,\ z\sim\mathcal N(0,{\bf I})
 $$
-对于 KL 散度来说，我们可以使用 MSE 计算 KL 散度
+对于 KL 散度来说，我们可以使用 MSE 计算 KL 散度：
 $$
 \begin{align*}
-D_{KL}({q} \ ||\ {p_\theta})&\propto \frac 1 2 \bigg|\bigg|(\sqrt{\alpha_t}x^{t-1}+\sqrt{1-\alpha_t}z)-\Big(\sqrt{\alpha_t}x^{t-1}+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}(-\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a),F_T])\Big)\bigg|\bigg|^2_2\\
-&=\frac 1 2 \bigg|\bigg|\sqrt{1-\alpha_t}z+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a),F_T]\bigg|\bigg|^2_2\\
+D_{KL}({q} \ ||\ {p_\theta})&\propto \frac 1 2 \bigg|\bigg|(\sqrt{\alpha_t}x^{t-1}+\sqrt{1-\alpha_t}z)-\Big(\sqrt{\alpha_t}x^{t-1}+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}(-\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)])\Big)\bigg|\bigg|^2_2\\
+&=\frac 1 2 \bigg|\bigg|\sqrt{1-\alpha_t}z+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]\bigg|\bigg|^2_2\\
 \because p(x;\mu,\Sigma)&=\frac 1{\sqrt{(2\pi)^n|\Sigma|}}e^{-\frac{(x-\mu)^T\Sigma^{-1}(x-\mu)}{2}}
 \propto
 p(x;\mu,\sigma^2)=\frac 1{\sqrt{(2\pi)^n}\sigma}e^{-\frac{(x-\mu)^2}{2\sigma^2}},when\ \Sigma=\sigma^2{\rm I}\\
-\therefore\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ &\Rightarrow \frac 1 2 \bigg|\bigg|\sqrt{1-\alpha_t}(-\nabla_xq(x^t))+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a),F_T]\bigg|\bigg|^2_2
+\therefore\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ &\Rightarrow \frac 1 2 \bigg|\bigg|\sqrt{1-\alpha_t}(-\nabla_xq(x^t))+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]\bigg|\bigg|^2_2
 \end{align*}
 $$
 综上所述：
 $$
-\mathcal L(x_{0:T},\{\beta_i\}^T_{i=1})=\frac 1 2\sum_{t>1}\mathbb E_{q}\bigg[\bigg|\bigg|\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a),F_T]-\sqrt{1-\alpha_t}\nabla_xq(x^t)\bigg|\bigg|^2_2\bigg]
+\mathcal L(x^{0:T},\{\beta_i\}^T_{i=1})=\frac 1 2\sum_{t>1}\mathbb E_{q}\bigg[\bigg|\bigg|\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\sqrt{1-\alpha_t}\nabla_xq(x^t)\bigg|\bigg|^2_2\bigg]
 $$
 结论：
 
-- 公式形式上和当前使用的公式一致，但细节参数不同，下周会对这个新loss进行验证。
+- loss形式上和当前使用的loss一致，但细节参数不同，下周会对这个新loss进行验证。
 
