@@ -45,7 +45,7 @@ $$
 &=E_q\bigg[-\log p(x^T)-\sum_{\color{green}t> 1}\log \frac {p_\theta(x^{t-1}|x^{t},F_{T})}{q(x^t|x^{t-1})}-{\color{green}\log\frac {p_\theta(x^{0}|x^{1},F_{T})}{q(x^1|x^{0})}}\bigg]\\
 \end{align*}
 $$
-根据贝叶斯定理: $q(x^t|x^{t-1})=\cfrac{q(x^{t-1}|x^t)q(x^t)}{q(x^{t-1})}$，但是 $q(x^{t-1}|x^t)$ 并不合理。又因 $q(x^{1:T}|x^0)$ 令 $q(x^t|x^{t-1},x^0)=q(x^t|x^{t-1})$ 满足，因此引入 $x^0$ 作为条件 $q(x^t|x^{t-1})=q(x^t|x^{t-1},x^0)=\cfrac{q(x^{t-1}|x^t,x^0)q(x^t|x^0)}{q(x^{t-1}|x^0)}$。
+根据贝叶斯定理: $q(x^t|x^{t-1})=\cfrac{q(x^{t-1}|x^t)q(x^t)}{q(x^{t-1})}$，但是 $q(x^{t-1}|x^t)$ 是无法直接处理的。又因 $q(x^{1:T}|x^0)$ 令 $q(x^t|x^{t-1},x^0)=q(x^t|x^{t-1})$ 满足，因此引入 $x^0$ 作为条件 $q(x^t|x^{t-1})=q(x^t|x^{t-1},x^0)=\cfrac{q(x^{t-1}|x^t,x^0)q(x^t|x^0)}{q(x^{t-1}|x^0)}$。
 $$
 \begin{align*}
 &=E_q\bigg[-\log p(x^T)-\sum_{t> 1}\log \frac {p_\theta(x^{t-1}|x^{t},F_{T})}{\color{green}q(x^{t-1}|x^t,x^0)}\cdot \frac{\color{green}q(x^{t-1}|x^0)}{\color{green}q(x^{t}|x^0)}-{\log\frac {p_\theta(x^{0}|x^{1},F_{T})}{q(x^1|x^{0})}}\bigg]\\
@@ -67,35 +67,68 @@ $$
 
 - 引入 $F_T$ 只影响 ${q(x^{t-1}|x^t,x^0)}$ 和 ${p_\theta(x^{t-1}|x^{t},F_{T})}$ 的相对熵；
 
-#### 引入 Score-based 
+#### 引入 Score-based 得到目标 Loss
 
-这里开始，我引入 Score-based 作为 $p_\theta$ 中计算梯度的模型，把上面的最优化问题进行限制。定义 Score-based 计算梯度：
+对于 Diffusion process 来说：
 $$
-\sqrt{\bar\alpha_t}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]\approx -z_\theta\propto\min\{||x^{0}_i-x^{t}_{a}||^2_2\ |x^{0}_i\in x^{0}\},\ x^{t}_{a}=\frac{x^{t}}{\sqrt{\overline\alpha_t}}
-$$ {t}
-Sampling Process可描述为：
+q(x^{t-1}|x^t,x^0)=\mathcal N(x^{t-1};\tilde\mu(x^t,x^0),\tilde\beta_t)
 $$
-x^{t-1}=\frac 1 {\sqrt {\alpha_t}}(x^t-\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}(-\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]))\\
-\Rightarrow x^t=\sqrt{\alpha_t}x^{t-1}+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}(-\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)])
-$$
-又因为，对于 Diffusion process 来说：
-$$
-x^{t}=\sqrt{\alpha_t}x^{t-1}+\sqrt{1-\alpha_t}z,\ z\sim\mathcal N(0,{\bf I})
-$$
-对于 KL 散度来说，我们可以使用 MSE 计算 KL 散度：
+分解得到：（$note:\bar\beta_t=1-\bar\alpha_t,\bar\alpha_t=\prod^T_{i=1}\alpha_i,\alpha_t=1-\beta_t$）
 $$
 \begin{align*}
-D_{KL}({q} \ ||\ {p_\theta})&\propto \frac 1 2 \bigg|\bigg|(\sqrt{\alpha_t}x^{t-1}+\sqrt{1-\alpha_t}z)-\Big(\sqrt{\alpha_t}x^{t-1}+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}(-\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)])\Big)\bigg|\bigg|^2_2\\
-&=\frac 1 2 \bigg|\bigg|\sqrt{1-\alpha_t}z+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]\bigg|\bigg|^2_2\\
+q(x^{t-1}|x^{t},x^0)&={\color{teal}q(x^{t}|x^{t-1},x^0)}\frac{\color{brown}q(x^{t-1}|x^0)}{\color{olive}q(x^{t}|x^0)}\\
+
+&={\color{teal}\mathcal N(x^{t};\sqrt{\alpha_{t}}x^{t-1},\beta_t{\rm I})}\frac{\color{brown}\mathcal N(x^{t-1};\sqrt{\bar\alpha_{t-1}}x^{0},\bar\beta_{t-1}{\rm I})}{\color{olive}\mathcal N(x^{t};\sqrt{\bar\alpha_{t}}x^{0},\bar\beta_{t}{\rm I})}\\
+
+&\propto \exp(-\frac 1 2({\color{teal}\frac{(x^t-\sqrt{\alpha_t}x^{t-1})^2}{\beta_t}}+{\color{brown}\frac{(x^{t-1}-\sqrt{\bar\alpha_{t-1}}x^{0})^2}{\bar\beta_{t-1}}}+{\color{olive}\frac{(x^t-\sqrt{\bar\alpha_t}x^{0})^2}{\bar\beta_t}}))\\
+
+&= \exp(-\frac 1 2({\color{red}(\frac {\alpha_t} {\beta_t}+\frac 1{\bar\beta_{t-1}})}(x^{t-1})^2-2{\color{blue}(\frac {\sqrt{\alpha_t}} {\beta_t}x^t+\frac {\sqrt{\overline\alpha_{t-1}}}{\bar\beta_{t-1}}x^0)}x^{t-1}+C(x^t,x^0)))\\
+
+\end{align*}
+$$
+由此可以解得：
+$$
+\begin{align*}
+\tilde \beta_t&=\frac 1{\color{red}\frac {\alpha_t} {\beta_t}+\frac 1{\bar\beta_{t-1}}}=\frac{\bar\beta_{t-1}}{\bar\beta_{t}}\beta_{t}\\
+\tilde\mu(x^t,x^0)&=\frac{\color{blue}\frac {\sqrt{\alpha_t}} {\beta_t}x^t+\frac {\sqrt{\overline\alpha_{t-1}}}{\bar\beta_{t-1}}x^0}{\color{red}\frac {\alpha_t} {\beta_t}+\frac 1{\bar\beta_{t-1}}}\\
+&=\frac{\sqrt{\alpha_t}\bar\beta_{t-1}}{\bar\beta_t}x^t+\frac{\sqrt{\bar\alpha_{t-1}}\beta_{t}}{\bar\beta_t}x^0\\
+Reparameterizing&\Rightarrow\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac {\beta_t}{\sqrt{\bar\beta_t}}z),z\sim\mathcal N(0,{\rm I})
+\end{align*}
+$$
+其中，$x^t(x^0,z)=\sqrt{\bar\alpha_t}x^0+\sqrt{\bar\beta_t}z$
+
+这里开始，我**引入 Score-based** 作为 $p_\theta$ 中计算梯度的模型，把上面的最优化问题进行限制。定义 Score-based 计算梯度：
+$$
+\sqrt{\bar\alpha_t}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]\approx -z_\theta(x^t)\propto\min\{||x^{0}_i-x^{t}_{a}||^2_2\ |x^{0}_i\in x^{0}\},\ x^{t}_{a}=\frac{x^{t}}{\sqrt{\overline\alpha_t}}
+$$ {t}
+Sampling Process 同理得到：
+$$
+p_\theta(x^{t-1}|x^t,F_T)=\mathcal N(x^{t-1};\mu_\theta(x^t,t,F_T),\Sigma_\theta(x^t,t)),\Sigma_\theta(x^t,t)=\sigma^2{\rm I}=\tilde\beta_t{\rm I}\\
+\Rightarrow \mu_\theta(x^t,t,F_T)=\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{\bar\beta_t}}z_\theta(x^t))
+$$
+对于两个高斯分布的 KL 散度来说（借鉴VAE的推导）。最后我们可以得到如下推导：
+$$
+\begin{align*}
+D_{KL}({q} \ ||\ {p_\theta})&=D_{KL}(\mathcal N(x^{t-1};\tilde\mu(x^t,x^0),\tilde\beta_t)||\mathcal N(x^{t-1};\mu_\theta(x^t,t,F_T),\Sigma_\theta(x^t,t)))\\
+&=\frac 1 2(n+\frac 1 {\tilde\beta_t^2}||\tilde\mu(x^t,x^0)-\mu_\theta(x^t,t,F_T)||^2-n+\log 1)\\
+&=\frac 1 {2\tilde\beta_t^2}||\tilde\mu(x^t,x^0)-\mu_\theta(x^t,t,F_T)||^2\\
+
+&= \frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac {\beta_t}{\sqrt{\bar\beta_t}}z)\Big)-\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{\bar\beta_t}}z_\theta(x^t))\Big)\bigg|\bigg|^2_2\\
+
+&=\frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\frac {\beta_t}{\sqrt{\bar\beta_t}}\big(z_\theta(x^t)-z\big)  \bigg|\bigg|^2_2\\
+
 \because p(x;\mu,\Sigma)&=\frac 1{\sqrt{(2\pi)^n|\Sigma|}}e^{-\frac{(x-\mu)^T\Sigma^{-1}(x-\mu)}{2}}
 \propto
 p(x;\mu,\sigma^2)=\frac 1{\sqrt{(2\pi)^n}\sigma}e^{-\frac{(x-\mu)^2}{2\sigma^2}},when\ \Sigma=\sigma^2{\rm I}\\
-\therefore\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ &\Rightarrow \frac 1 2 \bigg|\bigg|\sqrt{1-\alpha_t}(-\nabla_xq(x^t))+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]\bigg|\bigg|^2_2
+
+\therefore\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ &\Rightarrow \frac 1 {2\tilde\beta_t^2} \bigg|\bigg|
+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{\bar\beta_t}}\Big(\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\nabla_xq(x_a^t)\Big) \bigg|\bigg|^2_2
+
 \end{align*}
 $$
 综上所述：
 $$
-\mathcal L(x^{0:T},\{\beta_i\}^T_{i=1})=\frac 1 2\sum_{t>1}\mathbb E_{q}\bigg[\bigg|\bigg|\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{1-\overline a_t}}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\sqrt{1-\alpha_t}\nabla_xq(x^t)\bigg|\bigg|^2_2\bigg]
+\mathcal L(x_a^{0:T},\{\beta_i\}^T_{i=1})=\sum_{t>1}\frac 1 {2\tilde\beta_t^2}\mathbb E_{q}\bigg[\bigg|\bigg|\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{\bar\beta_t}}\Big(\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\nabla_xq(x_a^t)\Big)\bigg|\bigg|^2_2\bigg]
 $$
 结论：
 
