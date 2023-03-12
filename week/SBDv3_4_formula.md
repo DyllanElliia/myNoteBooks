@@ -8,19 +8,15 @@
 > 4. 完善公式推导，找到了一个可尝试的修正了参数的新loss。
 > 5. 对模型部分代码优化，在不影响效率下大大降低了GPU显存占用；
 >
-> 周报内容是对 工作3 和 工作4 的阐述。
+> 周报内容是对 工作4 的阐述。
 >
 > 关于上周提出的 **对于 $x^{(t)}_a$ 生成策略的修改**，训练实验结果显示不合理，且基于 $Nearest$ 生成的结果显然不通过 Jarque-Bera 检验。（注：原方法的中间变量均通过JB检验）
-
-## 估计梯度的已有思路
-
-
-
-
 
 ## 公式推导与分析
 
 > 对部分符号进行重定义，为了降低公式编写难度，例如 $x^{(t)}$ 重定义为了 $x^t$。
+
+过去的 Loss 的依据是 Score-based，但 Diffusion的随机过程和 Langevin 过程存在区别，因此具体内容的计算上存在不同。
 
 ### SBD Loss推导
 
@@ -99,23 +95,23 @@ $$
 
 这里开始，我**引入 Score-based** 作为 $p_\theta$ 中计算梯度的模型，把上面的最优化问题进行限制。定义 Score-based 计算梯度：
 $$
-\sqrt{\bar\alpha_t}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]\approx -z_\theta(x^t)\propto\min\{||x^{0}_i-x^{t}_{a}||^2_2\ |x^{0}_i\in x^{0}\},\ x^{t}_{a}=\frac{x^{t}}{\sqrt{\overline\alpha_t}}
+\sqrt{\bar\alpha_t}\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]\approx -z_\theta(x^t,F_T)\propto\min\{||x^{0}_i-x^{t}_{a}||^2_2\ |x^{0}_i\in x^{0}\},\ x^{t}_{a}=\frac{x^{t}}{\sqrt{\overline\alpha_t}}
 $$ {t}
 Sampling Process 同理得到：
 $$
 p_\theta(x^{t-1}|x^t,F_T)=\mathcal N(x^{t-1};\mu_\theta(x^t,t,F_T),\Sigma_\theta(x^t,t)),\Sigma_\theta(x^t,t)=\sigma^2{\rm I}=\tilde\beta_t{\rm I}\\
-\Rightarrow \mu_\theta(x^t,t,F_T)=\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{\bar\beta_t}}z_\theta(x^t))
+\Rightarrow \mu_\theta(x^t,t,F_T)=\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{\bar\beta_t}}z_\theta(x^t,F_T))
 $$
-对于两个高斯分布的 KL 散度来说（借鉴VAE的推导）。最后我们可以得到如下推导：
+对于两个高斯分布的 KL 散度来说（借鉴VAE的推导），我们可以得到如下推导：
 $$
 \begin{align*}
 D_{KL}({q} \ ||\ {p_\theta})&=D_{KL}(\mathcal N(x^{t-1};\tilde\mu(x^t,x^0),\tilde\beta_t)||\mathcal N(x^{t-1};\mu_\theta(x^t,t,F_T),\Sigma_\theta(x^t,t)))\\
 &=\frac 1 2(n+\frac 1 {\tilde\beta_t^2}||\tilde\mu(x^t,x^0)-\mu_\theta(x^t,t,F_T)||^2-n+\log 1)\\
 &=\frac 1 {2\tilde\beta_t^2}||\tilde\mu(x^t,x^0)-\mu_\theta(x^t,t,F_T)||^2\\
 
-&= \frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac {\beta_t}{\sqrt{\bar\beta_t}}z)\Big)-\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{\bar\beta_t}}z_\theta(x^t))\Big)\bigg|\bigg|^2_2\\
+&= \frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac {\beta_t}{\sqrt{\bar\beta_t}}z)\Big)-\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{\bar\beta_t}}z_\theta(x^t,F_T))\Big)\bigg|\bigg|^2_2\\
 
-&=\frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\frac {\beta_t}{\sqrt{\bar\beta_t}}\big(z_\theta(x^t)-z\big)  \bigg|\bigg|^2_2\\
+&=\frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\frac {\beta_t}{\sqrt{\bar\beta_t}}\big(z_\theta(x^t,F_T)-z\big)  \bigg|\bigg|^2_2\\
 
 \because p(x;\mu,\Sigma)&=\frac 1{\sqrt{(2\pi)^n|\Sigma|}}e^{-\frac{(x-\mu)^T\Sigma^{-1}(x-\mu)}{2}}
 \propto
@@ -126,6 +122,8 @@ p(x;\mu,\sigma^2)=\frac 1{\sqrt{(2\pi)^n}\sigma}e^{-\frac{(x-\mu)^2}{2\sigma^2}}
 
 \end{align*}
 $$
+其中，$\nabla_xq(x_a^t)$ 为我们通过算法估计的梯度方向，目前是个待改善内容。
+
 综上所述：
 $$
 \mathcal L(x_a^{0:T},\{\beta_i\}^T_{i=1})=\sum_{t>1}\frac 1 {2\tilde\beta_t^2}\mathbb E_{q}\bigg[\bigg|\bigg|\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{\bar\beta_t}}\Big(\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\nabla_xq(x_a^t)\Big)\bigg|\bigg|^2_2\bigg]
