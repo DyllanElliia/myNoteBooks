@@ -19,7 +19,7 @@ x^{(t)}&=\sqrt{\alpha_t}x^{(t-1)}+\sqrt{1-\alpha_t}z_t\\
 &=\sqrt{\alpha_t\alpha_{t-1}}x^{(t-2)}+\sqrt{1-\alpha_t\alpha_{t-1}}\overline z_t\\
 &=\ \cdots\\
 &=\sqrt{\overline\alpha_t}x^{(0)}+\sqrt{1-\overline\alpha_t}z,\ z\sim\mathcal N(0,{\bf I})\\
-\Rightarrow x^{(t)}_{a}&=\frac{x^{(t)}}{\sqrt{\alpha_t}}=x^{(t-1)}+\sqrt{\frac{1-\alpha_t}{\alpha_t}}z_t\\
+\Rightarrow x^{(t)}_{a}&={\color{red}\frac{x^{(t)}}{\sqrt{\alpha_t}}}=x^{(t-1)}+\sqrt{\frac{1-\alpha_t}{\alpha_t}}z_t\\
 &={\color{blue}\frac{x^{(t)}}{\sqrt{\overline\alpha_t}}}=x^{(0)}+\sqrt{\frac{1-\overline\alpha_t}{\overline\alpha_t}}z,\ z\sim\mathcal N(0,{\bf I})
 \end{align*}
 $$
