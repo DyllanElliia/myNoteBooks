@@ -99,7 +99,7 @@ $$
 $$ {t}
 Sampling Process 同理得到：
 $$
-p_\theta(x^{t-1}|x^t,F_T)=\mathcal N(x^{t-1};\mu_\theta(x^t,t,F_T),\Sigma_\theta(x^t,t)),\Sigma_\theta(x^t,t)=\sigma^2{\rm I}=\tilde\beta_t{\rm I}\\
+p_\theta(x^{t-1}|x^t,F_T)=\mathcal N(x^{t-1};\mu_\theta(x^t,t,F_T),\Sigma_\theta(x^t,t)),\Sigma_\theta(x^t,t)=\sigma^2{\rm I}=\tilde\beta^2_t{\rm I}\\
 \Rightarrow \mu_\theta(x^t,t,F_T)=\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{\bar\beta_t}}z_\theta(x^t,F_T))
 $$
 对于两个高斯分布的 KL 散度来说（借鉴VAE的推导），我们可以得到如下推导：
@@ -131,4 +131,3 @@ $$
 结论：
 
 - loss形式上和当前使用的loss一致，但细节参数不同，下周会对这个新loss进行验证。
-
