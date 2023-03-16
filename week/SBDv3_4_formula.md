@@ -5,7 +5,7 @@
 > 1. Foundation Model 调研任务；
 > 2. 点云（和 Mesh）数据集收集；
 > 3. 寻找梯度估计的灵感：收集传统点云降噪论文和与3D梯度有关的深度论文；
-> 4. 完善公式推导，找到了一个可尝试的修正了参数的新loss。
+> 4. 完善公式推导，~~找到了一个可尝试的修正了权重的新loss。~~ **证明了原loss更可靠**。
 > 5. 对模型部分代码优化，在不影响效率下大大降低了GPU显存占用；
 >
 > 周报内容是对 工作4 的阐述。
@@ -69,29 +69,29 @@ $$
 $$
 q(x^{t-1}|x^t,x^0)=\mathcal N(x^{t-1};\tilde\mu(x^t,x^0),\tilde\beta_t)
 $$
-分解得到：（$note:\bar\beta_t=1-\bar\alpha_t,\bar\alpha_t=\prod^T_{i=1}\alpha_i,\alpha_t=1-\beta_t$）
+分解得到：（$note:\bar\alpha_t=\prod^T_{i=1}\alpha_i,\alpha_t=1-\beta_t$）
 $$
 \begin{align*}
 q(x^{t-1}|x^{t},x^0)&={\color{teal}q(x^{t}|x^{t-1},x^0)}\frac{\color{brown}q(x^{t-1}|x^0)}{\color{olive}q(x^{t}|x^0)}\\
 
-&={\color{teal}\mathcal N(x^{t};\sqrt{\alpha_{t}}x^{t-1},\beta_t{\rm I})}\frac{\color{brown}\mathcal N(x^{t-1};\sqrt{\bar\alpha_{t-1}}x^{0},\bar\beta_{t-1}{\rm I})}{\color{olive}\mathcal N(x^{t};\sqrt{\bar\alpha_{t}}x^{0},\bar\beta_{t}{\rm I})}\\
+&={\color{teal}\mathcal N(x^{t};\sqrt{\alpha_{t}}x^{t-1},\beta_t{\rm I})}\frac{\color{brown}\mathcal N(x^{t-1};\sqrt{\bar\alpha_{t-1}}x^{0},(1-\bar\alpha_{t-1}){\rm I})}{\color{olive}\mathcal N(x^{t};\sqrt{\bar\alpha_{t}}x^{0},(1-\bar\alpha_{t}){\rm I})}\\
 
-&\propto \exp(-\frac 1 2({\color{teal}\frac{(x^t-\sqrt{\alpha_t}x^{t-1})^2}{\beta_t}}+{\color{brown}\frac{(x^{t-1}-\sqrt{\bar\alpha_{t-1}}x^{0})^2}{\bar\beta_{t-1}}}+{\color{olive}\frac{(x^t-\sqrt{\bar\alpha_t}x^{0})^2}{\bar\beta_t}}))\\
+&\propto \exp(-\frac 1 2({\color{teal}\frac{(x^t-\sqrt{\alpha_t}x^{t-1})^2}{\beta_t}}+{\color{brown}\frac{(x^{t-1}-\sqrt{\bar\alpha_{t-1}}x^{0})^2}{1-\bar\alpha_{t-1}}}-{\color{olive}\frac{(x^t-\sqrt{\bar\alpha_t}x^{0})^2}{1-\bar\alpha_t}}))\\
 
-&= \exp(-\frac 1 2({\color{red}(\frac {\alpha_t} {\beta_t}+\frac 1{\bar\beta_{t-1}})}(x^{t-1})^2-2{\color{blue}(\frac {\sqrt{\alpha_t}} {\beta_t}x^t+\frac {\sqrt{\overline\alpha_{t-1}}}{\bar\beta_{t-1}}x^0)}x^{t-1}+C(x^t,x^0)))\\
+&= \exp(-\frac 1 2({\color{red}(\frac {\alpha_t} {\beta_t}+\frac 1{1-\bar\alpha_{t-1}})}(x^{t-1})^2-2{\color{blue}(\frac {\sqrt{\alpha_t}} {\beta_t}x^t+\frac {\sqrt{\overline\alpha_{t-1}}}{1-\bar\alpha_{t-1}}x^0)}x^{t-1}+C(x^t,x^0)))\\
 
 \end{align*}
 $$
 由此可以解得：
 $$
 \begin{align*}
-\tilde \beta_t&=\frac 1{\color{red}\frac {\alpha_t} {\beta_t}+\frac 1{\bar\beta_{t-1}}}=\frac{\bar\beta_{t-1}}{\bar\beta_{t}}\beta_{t}\\
-\tilde\mu(x^t,x^0)&=\frac{\color{blue}\frac {\sqrt{\alpha_t}} {\beta_t}x^t+\frac {\sqrt{\overline\alpha_{t-1}}}{\bar\beta_{t-1}}x^0}{\color{red}\frac {\alpha_t} {\beta_t}+\frac 1{\bar\beta_{t-1}}}\\
-&=\frac{\sqrt{\alpha_t}\bar\beta_{t-1}}{\bar\beta_t}x^t+\frac{\sqrt{\bar\alpha_{t-1}}\beta_{t}}{\bar\beta_t}x^0\\
-Reparameterizing&\Rightarrow\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac {\beta_t}{\sqrt{\bar\beta_t}}z),z\sim\mathcal N(0,{\rm I})
+\tilde \beta_t&=\frac 1{\color{red}\frac {\alpha_t} {\beta_t}+\frac 1{1-\bar\alpha_{t-1}}}=\frac{1-\bar\alpha_{t-1}}{1-\bar\alpha_{t}}\beta_{t}\\
+\tilde\mu(x^t,x^0)&=\frac{\color{blue}\frac {\sqrt{\alpha_t}} {\beta_t}x^t+\frac {\sqrt{\overline\alpha_{t-1}}}{1-\bar\alpha_{t-1}}x^0}{\color{red}\frac {\alpha_t} {\beta_t}+\frac 1{1-\bar\alpha_{t-1}}}\\
+&=\frac{\sqrt{\alpha_t}1-\bar\alpha_{t-1}}{1-\bar\alpha_t}x^t+\frac{\sqrt{\bar\alpha_{t-1}}\beta_{t}}{1-\bar\alpha_t}x^0\\
+Reparameterizing&\Rightarrow\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac {\beta_t}{\sqrt{1-\bar\alpha_t}}z),z\sim\mathcal N(0,{\rm I})
 \end{align*}
 $$
-其中，$x^t(x^0,z)=\sqrt{\bar\alpha_t}x^0+\sqrt{\bar\beta_t}z$
+其中，$x^t(x^0,z)=\sqrt{\bar\alpha_t}x^0+\sqrt{1-\bar\alpha_t}z$
 
 这里开始，我**引入 Score-based** 作为 $p_\theta$ 中计算梯度的模型，把上面的最优化问题进行限制。定义 Score-based 计算梯度：
 $$
@@ -100,7 +100,7 @@ $$ {t}
 Sampling Process 同理得到：
 $$
 p_\theta(x^{t-1}|x^t,F_T)=\mathcal N(x^{t-1};\mu_\theta(x^t,t,F_T),\Sigma_\theta(x^t,t)),\Sigma_\theta(x^t,t)=\sigma^2{\rm I}=\tilde\beta^2_t{\rm I}\\
-\Rightarrow \mu_\theta(x^t,t,F_T)=\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{\bar\beta_t}}z_\theta(x^t,F_T))
+\Rightarrow \mu_\theta(x^t,t,F_T)=\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{1-\bar\alpha_t}}z_\theta(x^t,F_T))
 $$
 对于两个高斯分布的 KL 散度来说（借鉴VAE的推导），我们可以得到如下推导：
 $$
@@ -109,16 +109,16 @@ D_{KL}({q} \ ||\ {p_\theta})&=D_{KL}(\mathcal N(x^{t-1};\tilde\mu(x^t,x^0),\tild
 &=\frac 1 2(n+\frac 1 {\tilde\beta_t^2}||\tilde\mu(x^t,x^0)-\mu_\theta(x^t,t,F_T)||^2-n+\log 1)\\
 &=\frac 1 {2\tilde\beta_t^2}||\tilde\mu(x^t,x^0)-\mu_\theta(x^t,t,F_T)||^2\\
 
-&= \frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac {\beta_t}{\sqrt{\bar\beta_t}}z)\Big)-\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{\bar\beta_t}}z_\theta(x^t,F_T))\Big)\bigg|\bigg|^2_2\\
+&= \frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac {\beta_t}{\sqrt{1-\bar\alpha_t}}z)\Big)-\Big(\frac 1 {\sqrt{\alpha_t}}(x^t(x^0,z)-\frac{\beta_t}{\sqrt{1-\bar\alpha_t}}z_\theta(x^t,F_T))\Big)\bigg|\bigg|^2_2\\
 
-&=\frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\frac {\beta_t}{\sqrt{\bar\beta_t}}\big(z_\theta(x^t,F_T)-z\big)  \bigg|\bigg|^2_2\\
+&=\frac 1 {2\tilde\beta_t^2} \bigg|\bigg|\frac {\beta_t}{\sqrt{\alpha_t(1-\bar\alpha_t)}}\big(z_\theta(x^t,F_T)-z\big)  \bigg|\bigg|^2_2\\
 
 \because p(x;\mu,\Sigma)&=\frac 1{\sqrt{(2\pi)^n|\Sigma|}}e^{-\frac{(x-\mu)^T\Sigma^{-1}(x-\mu)}{2}}
 \propto
 p(x;\mu,\sigma^2)=\frac 1{\sqrt{(2\pi)^n}\sigma}e^{-\frac{(x-\mu)^2}{2\sigma^2}},when\ \Sigma=\sigma^2{\rm I}\\
 
 \therefore\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ &\Rightarrow \frac 1 {2\tilde\beta_t^2} \bigg|\bigg|
-\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{\bar\beta_t}}\Big(\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\nabla_xq(x_a^t)\Big) \bigg|\bigg|^2_2
+\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{\alpha_t(1-\bar\alpha_t)}}\Big(\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\nabla_xq(x_a^t)\Big) \bigg|\bigg|^2_2
 
 \end{align*}
 $$
@@ -126,8 +126,41 @@ $$
 
 综上所述：
 $$
-\mathcal L(x_a^{0:T},\{\beta_i\}^T_{i=1})=\sum_{t>1}\frac 1 {2\tilde\beta_t^2}\mathbb E_{q}\bigg[\bigg|\bigg|\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{\bar\beta_t}}\Big(\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\nabla_xq(x_a^t)\Big)\bigg|\bigg|^2_2\bigg]
+\mathcal L(x_a^{0:T},\{\beta_i\}^T_{i=1})=\sum_{t>1}\frac 1 {2\tilde\beta_t^2}\mathbb E_{q}\bigg[\bigg|\bigg|\frac{\beta_t\sqrt{\bar\alpha_t}}{\sqrt{\alpha_t(1-\bar\alpha_t)}}\Big(\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\nabla_xq(x_a^t)\Big)\bigg|\bigg|^2_2\bigg]
 $$
 结论：
 
-- loss形式上和当前使用的loss一致，但细节参数不同，下周会对这个新loss进行验证。
+- loss形式上和当前使用的loss一致，但增加了跟噪声方差有关的权重项。
+- loss形式上和DDPM的差不多。
+
+<img src="./assets/image-20230316161440095.png" alt="image-20230316161440095" style="zoom:67%;" />
+
+可视化权重项可见（上图），这个权重大小和噪声方差负相关。将这个权重与真实噪声方差相乘（下图），得到的结果是稳定在 $1\pm 10^{-6}$ 的一个数值。由此不难侧面证明这个权重项的作用是把噪声项归一化。
+
+<img src="./assets/image-20230316161449102.png" alt="image-20230316161449102" style="zoom:67%;" />
+
+### 缺陷
+
+通过梯度估计算法提取的“噪声样本”可以理解为一个真实梯度混合了错误噪声的样本。那么对于噪声程度较小的样本来说，错误噪声在噪声样本中的占比的偏高，若把它归一化，那么这个错误就会被很大程度地放大，最终干扰到loss下降结果。
+
+解决方法有两个：
+
+- 使用更高精度的梯度估计算法；
+- 训练时避免训练噪声程度过小的样本。
+
+### 进一步优化
+
+权重的作用是让loss更加关注细节，但对于点云来说，局部Patch的点数不足以支持梯度估计算法对细节的微小噪声进行提取（或许这里我可以尝试通过假设检验算出一个置信度）。但是我们可以在 $\mathcal L(x_a^{0:T},\{\beta_i\}^T_{i=1})$ 的基础上继续得到一个变分上界。
+$$
+\begin{align*}
+\mathcal L(x_a^{0:T},\{\beta_i\}^T_{i=1})&\le \sum_{t>1}\mathbb E_{q}\bigg[\bigg|\bigg|\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\nabla_xq(x_a^t)\bigg|\bigg|^2_2\bigg]\\
+&\le\mathbb E_{t,q}\bigg[\bigg|\bigg|\nabla_x log[s_\theta(x^{t-1}_a|x^{t}_a,F_T)]-\nabla_xq(x_a^t)\bigg|\bigg|^2_2\bigg]\\
+&=:\mathcal L_{simple}(x_a^{0:T},\{\beta_i\}^T_{i=1})
+
+\end{align*}
+$$
+**最后这个公式就是原先我们训练使用的公式**。当 $\mathcal L_{simple}(x_a^{0:T},\{\beta_i\}^T_{i=1})\rightarrow 0$，则 $\mathcal L(x_a^{0:T},\{\beta_i\}^T_{i=1})\rightarrow 0$ 显然成立。
+
+## 总结
+
+丰富了Loss推导的理论过程，并从数学上证明了原Loss的正确性与可靠性。

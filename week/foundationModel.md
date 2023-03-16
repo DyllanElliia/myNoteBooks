@@ -49,6 +49,8 @@ Weak supervision: 弱监督，允许标签带噪声（即带一些理解偏差�
 
 #### Model
 
+![image-20230316163135668](./assets/image-20230316163135668.png)
+
 网络框架CLIP是一个简化的 ConVIRT。（简化理由见：[后续章节](#Selecting an Efficient Pre-Training Method)）
 
 详细看这篇  https://zhuanlan.zhihu.com/p/486857682
@@ -83,7 +85,7 @@ Weak supervision: 弱监督，允许标签带噪声（即带一些理解偏差�
 
 简化了ConVIRT的投影函数 $t_v,t_u$，因为pair在整个数据集中没有重复出现。其中图片转换保留了什么他没说（或者我漏看了）
 
-简化了loss中的softmax t为 log参数化乘法标量，减少超参数（减少一个调参）
+优化了loss中的softmax t为 log参数化乘法标量，避免需要超参数（减少一个调参）
 
 #### Choosing and Scaling a Model
 
@@ -106,12 +108,14 @@ pass
 
 看它的实验概括 https://zhuanlan.zhihu.com/p/486857682
 
+---
+
 ## PointCLIP
 
 ### Contribution
 
 1. 把CLIP引用与点云识别工作，将 2D预训练的知识 迁移到 3D领域，可在没有任何 3D训练 的情况下对点云进行跨模态零样本识别；
-2. 一个Inter-view adapter，提高view的微调性能；
+2. 一个Inter-view adapter，实现了3D点云图像到CLIP模型的迁移；
 3. 最先进
 4. 泛化性能好，数据集 ModelNet10 ModelNet40 和最有挑战性的 ScanObjectNN 都不错。
 
@@ -131,16 +135,89 @@ pass
 
 文章在这把CLIP的输入描述为带分类信息的文本。
 
-但**这有个问题**，CLIP为了减少超参数，把softmax简化为了一个log参数化方法，PointCLIP又把它加回来了。为什么？是不是因为作者发现那个简化结果不好，然后发现还是调参好，所有偷换概念把它又加回来了？
+但**这有个问题**，CLIP为了减少可能的超参数，把包含了softmax的部分优化为了一个log参数化方法，PointCLIP又把softmax加回来了。为什么？是不是因为作者发现那个简化结果不好，然后发现还是调参好，所有偷换概念把它又加回来了？
 
 #### Model
 
+难点：
+
+- 3D中可用于训练的数据相比2D远远不够，即通过训练三维网络进行迁移学习是困难的。
+
+解决方法：
+
+- 在预训练的CLIP的基础上进行对点云进行zero-shot学习。
+  - 做法：把点云转深度图，即图像；
+  - 解释：点云是一组无序的三维离散数据，它的稀疏性和分布于基于网格的图像有很大区别。因此把点云的多个View生成投影图像可以消除3D和2D之间的模态差距，从而实现3D和2D之间的多模态。
+  - 投影图像直接使用深度图进行存储。
+
 ![image-20230315165732193](./assets/image-20230315165732193.png)
 
+##### Image Encoder
 
+依旧使用 Visual Encoder。
+
+Input：M个不同views的Depth Maps。
+
+Output：M个对应的图像表征。
+
+##### Textual Encoder
+
+依旧使用原的。
+
+Input：固定 Point Cloud Depth Map of a {CLASS}，CLASS 为K个点云的具体分类。
+
+Output：K个自然语言特征。
+
+##### Linear Combination
+
+![image-20230316154746363](./assets/image-20230316154746363.png)
+
+其中，$\alpha_i$ 是超参数，衡量了第i个view的feature的重要程度。对于这个超参数，作者的解释是：这一些列过程对于 unseen 的3D点云数据是非参数的，因为是在2D是进行预训练。
+
+##### Inter-view Adapter for PointCLIP（这才是需要训练的东西哈）
+
+Motivation：性能不够，增量来凑。
+
+few-shot：相比于zero-shot的基于其他样本建立关联实现迁移，few指对于全新事物需要一点学习样本建立新关联。
+
+- 比如让人理解一个从未有过的事物或定义（这个事物与人理解的所有事物完全没有任何关联），你需要给人一点例子才能让他理解这个；
+
+但是对于CLIP模型进行微调使其更符合本任务是不行的，因为涉及庞大的参数和3D小样本（必定会导致过拟合）。
+
+参考前人工作后，本文在其中增加了一个3层MLP，目的是增强在 few-shot 的性能。训练这个Inter-view Adapter的过程中冻结CLIP的两个Encoder，并通过交叉熵训练这个adapter。
+
+![image-20230316163406387](./assets/image-20230316163406387.png)
+
+![image-20230316164002575](./assets/image-20230316164002575.png)
+
+![image-20230316164010766](./assets/image-20230316164010766.png)
+
+总结：
+
+- adapter的作用是融合特征，保留原图像特征的基础上，融合adapter提炼附加特征。
+- 作用是，不改变原CLIP模型基础上，把3D点云数据集通过adapter适配进CLIP这个模式中。
+- 实验：哇哦！提高了欸！（拍手手）
+
+##### Multi-knowledge Ensembling
+
+把PointCLIP和其他模型的结果一起融合训练可以得到一个更好的结果，这证明了这些模型之间具有互补性。
+
+![image-20230316165838531](./assets/image-20230316165838531.png)
+
+### Experiment
 
 #### Dataset
 
+数据集 ModelNet10 ModelNet40 和最有挑战性的 ScanObjectNN
 
+https://zhuanlan.zhihu.com/p/474870801
 
-####
+补充一个训练更快（基于已经训练好的CLIP当然快啦）
+
+![image-20230316170130733](./assets/image-20230316170130733.png)
+
+---
+
+## OpenSegmentation
+
+RealName：Open-vocabulary semantic segmentation
